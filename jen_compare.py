@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
+try:
+    import http.client as httplib
+except ImportError:
+    import httplib
 import os
 import sys
 
@@ -11,6 +15,7 @@ from click import echo
 
 
 BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
+DEFAULT_TIMEOUT = 5  # Seconds
 
 
 def main():
@@ -23,8 +28,8 @@ def main():
     echo('Right branch.: {}'.format(right_branch))
     echo()
 
-    left_doc = BeautifulSoup(requests.get(left_branch).content, 'html.parser')
-    right_doc = BeautifulSoup(requests.get(right_branch).content, 'html.parser')
+    left_doc = get_url(left_branch, timeout=args.timeout)
+    right_doc = get_url(right_branch, timeout=args.timeout)
 
     left_failed = get_set_from_html(left_doc)
     right_failed = get_set_from_html(right_doc)
@@ -38,6 +43,36 @@ def main():
     list_side_failures(fail_only_left, left_fail=True, right_fail=False)
     echo()
     list_side_failures(fail_only_right, left_fail=False, right_fail=True)
+
+
+def branch_url(base, path):
+    return '{}/{}/testReport/'.format(base, path)
+
+
+def get_url(url, timeout):
+    try:
+        response = requests.get(url, timeout=timeout)
+    except requests.exceptions.ConnectTimeout:
+        echo('Timed out: {}'.format(url))
+        sys.exit(1)
+    code = response.status_code
+    if code != 200:
+        echo('{} {}: {}'.format(code, httplib.responses[code], url))
+        sys.exit(1)
+    return BeautifulSoup(response.content, 'html.parser')
+
+
+def get_set_from_html(html):
+    """
+    :param html: Parsed BS html
+    :return: set of failing tests names
+    """
+    fail_table = html.find_all('table')[1]
+    failed = set()
+    for row in fail_table.find_all('tr')[1:]:
+        failed.add(row.find_all('a')[2].text)
+
+    return failed
 
 
 def list_side_failures(failures, left_fail, right_fail):
@@ -61,24 +96,8 @@ def list_side_failures(failures, left_fail, right_fail):
         echo(line)
 
 
-def branch_url(base, path):
-    return '{}/{}/testReport/'.format(base, path)
-
-
-def get_set_from_html(html):
-    """
-    :param html: Parsed BS html
-    :return: set of failing tests names
-    """
-    fail_table = html.find_all('table')[1]
-    failed = set()
-    for row in fail_table.find_all('tr')[1:]:
-        failed.add(row.find_all('a')[2].text)
-
-    return failed
-
-
 style = click.style
+
 
 def style_monochrome(msg, *args, **kwargs):
     return msg
@@ -86,6 +105,17 @@ def style_monochrome(msg, *args, **kwargs):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+
+    def check_positive(value):
+        try:
+            ivalue = int(value)
+        except ValueError:
+            ivalue = 0
+        if ivalue <= 0:
+            raise argparse.ArgumentTypeError(
+                "{} is not a positive integer".format(value)
+            )
+        return ivalue
 
     default_base = os.environ.get(BASE_ENV_VAR_NAME)
     parser.add_argument(
@@ -117,6 +147,11 @@ def parse_args():
         '-m', '--monochrome',
         action='store_true',
         help="Don't use colours in output",
+    )
+    parser.add_argument(
+        '-t', '--timeout', metavar='N',
+        type=check_positive,
+        help='HTTP timeout in seconds (default: {})'.format(DEFAULT_TIMEOUT),
     )
 
     args = parser.parse_args()
