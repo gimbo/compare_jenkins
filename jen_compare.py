@@ -7,6 +7,7 @@ import sys
 import click
 import requests
 from bs4 import BeautifulSoup
+from click import echo
 
 
 BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
@@ -18,9 +19,9 @@ def main():
 
     left_branch = branch_url(args.base, args.left)
     right_branch = branch_url(args.base, args.right)
-    click.echo('Left branch..: {}'.format(left_branch))
-    click.echo('Right branch.: {}'.format(right_branch))
-    click.echo()
+    echo('Left branch..: {}'.format(left_branch))
+    echo('Right branch.: {}'.format(right_branch))
+    echo()
 
     left_doc = BeautifulSoup(requests.get(left_branch).content, 'html.parser')
     right_doc = BeautifulSoup(requests.get(right_branch).content, 'html.parser')
@@ -30,20 +31,20 @@ def main():
     fail_only_left = sorted(left_failed - right_failed)
     fail_only_right = sorted(right_failed - left_failed)
 
-    click.echo("Failed in the left branch..: {}".format(len(left_failed)))
-    click.echo("Failed in the right branch.: {}".format(len(right_failed)))
-    click.echo()
+    echo("Failed in the left branch..: {}".format(len(left_failed)))
+    echo("Failed in the right branch.: {}".format(len(right_failed)))
+    echo()
 
     list_side_failures(fail_only_left, left_fail=True, right_fail=False)
-    click.echo()
+    echo()
     list_side_failures(fail_only_right, left_fail=False, right_fail=True)
 
 
 def list_side_failures(failures, left_fail, right_fail):
 
-    pretty = click.style('===', fg='yellow')
-    failed = click.style('failed', fg='red')
-    passed = click.style('passed', fg='green')
+    pretty = style('===', fg='yellow')
+    failed = style('failed', fg='red')
+    passed = style('passed', fg='green')
 
     def side_words(side, failure):
         return '{} {}'.format(side, failed if failure else passed)
@@ -54,10 +55,10 @@ def list_side_failures(failures, left_fail, right_fail):
         right_words=side_words('right', right_fail),
         count=len(failures),
     )
-    click.echo(msg)
+    echo(msg)
 
     for line in failures:
-        click.echo(line)
+        echo(line)
 
 
 def branch_url(base, path):
@@ -75,6 +76,12 @@ def get_set_from_html(html):
         failed.add(row.find_all('a')[2].text)
 
     return failed
+
+
+style = click.style
+
+def style_monochrome(msg, *args, **kwargs):
+    return msg
 
 
 def parse_args():
@@ -106,6 +113,11 @@ def parse_args():
             'Path to right hand target (e.g. some-feature/20)'
         ),
     )
+    parser.add_argument(
+        '-m', '--monochrome',
+        action='store_true',
+        help="Don't use colours in output",
+    )
 
     args = parser.parse_args()
 
@@ -113,11 +125,15 @@ def parse_args():
         if default_base:
             args.base = default_base
         else:
-            click.echo(
+            echo(
                 'No URL base specified (either on command line or env var); '
                 'giving up.'
             )
             sys.exit(1)
+
+    if args.monochrome:
+        global style
+        style = style_monochrome
 
     return args
 
