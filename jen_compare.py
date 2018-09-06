@@ -18,34 +18,45 @@ def main():
 
     left_branch = branch_url(args.base, args.left)
     right_branch = branch_url(args.base, args.right)
-    click.echo('Comparing test results between {} and {}'.format(
-        left_branch,
-        right_branch
-    ))
+    click.echo('Left branch..: {}'.format(left_branch))
+    click.echo('Right branch.: {}'.format(right_branch))
+    click.echo()
 
     left_doc = BeautifulSoup(requests.get(left_branch).content, 'html.parser')
     right_doc = BeautifulSoup(requests.get(right_branch).content, 'html.parser')
 
     left_failed = get_set_from_html(left_doc)
     right_failed = get_set_from_html(right_doc)
-
-    click.echo()
-
-    click.echo("Failed in the left branch: {}".format(len(left_failed)))
-    click.echo("Failed in the right branch: {}".format(len(right_failed)))
-
-    click.echo()
-
     fail_only_left = sorted(left_failed - right_failed)
-    click.echo("=== Failed in left, passed in right. Total: {} ===".format(len(fail_only_left)))
-    for line in fail_only_left:
-        click.echo(line)
+    fail_only_right = sorted(right_failed - left_failed)
 
+    click.echo("Failed in the left branch..: {}".format(len(left_failed)))
+    click.echo("Failed in the right branch.: {}".format(len(right_failed)))
     click.echo()
 
-    fail_only_right = sorted(right_failed - left_failed)
-    click.echo("=== Failed in right, passed in left. Total: {} ===".format(len(fail_only_right)))
-    for line in fail_only_right:
+    list_side_failures(fail_only_left, left_fail=True, right_fail=False)
+    click.echo()
+    list_side_failures(fail_only_right, left_fail=False, right_fail=True)
+
+
+def list_side_failures(failures, left_fail, right_fail):
+
+    pretty = click.style('===', fg='yellow')
+    failed = click.style('failed', fg='red')
+    passed = click.style('passed', fg='green')
+
+    def side_words(side, failure):
+        return '{} {}'.format(side, failed if failure else passed)
+
+    msg = '{pretty} {left_words}, {right_words}: {count} {pretty}'.format(
+        pretty=pretty,
+        left_words=side_words('left', left_fail),
+        right_words=side_words('right', right_fail),
+        count=len(failures),
+    )
+    click.echo(msg)
+
+    for line in failures:
         click.echo(line)
 
 
