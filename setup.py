@@ -2,6 +2,7 @@
 
 from distutils.core import setup
 
+
 with open('requirements.txt') as fp:
     install_requires = fp.read()
 

@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 
 import argparse
+import os
+import sys
+
+import requests
+
+import click
+from bs4 import BeautifulSoup
+from click import echo
+
+
 try:
     import http.client as httplib
 except ImportError:
     import httplib
-import os
-import sys
-
-import click
-import requests
-from bs4 import BeautifulSoup
-from click import echo
 
 
 BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
