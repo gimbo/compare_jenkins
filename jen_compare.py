@@ -4,9 +4,8 @@ import argparse
 import os
 import sys
 
-import requests
-
 import click
+import requests
 from bs4 import BeautifulSoup
 from click import echo
 
@@ -168,6 +167,9 @@ def parse_args():
                 'giving up.'
             )
             sys.exit(1)
+
+    if args.timeout is None:
+        args.timeout = DEFAULT_TIMEOUT
 
     if args.monochrome:
         global style
