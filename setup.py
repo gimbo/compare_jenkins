@@ -14,6 +14,7 @@ setup(
     entry_points={
         'console_scripts': [
             'jen-compare=jen_compare:main',
+            'jen-build-history=jen_build_history:main',
         ],
     },
 )
