@@ -13,7 +13,7 @@ setup(
     install_requires=install_requires,
     entry_points={
         'console_scripts': [
-            'jen_compare=jen_compare:main',
+            'jen-compare=jen_compare:main',
         ],
     },
 )
