@@ -3,46 +3,41 @@
 (Forked/expanded from
 [evilkost/compare_jenkins](https://github.com/evilkost/compare_jenkins))
 
-Some small Jenkins-related tools which I sometimes find useful, particularly
-when working on a project with a fluctuating (and possibly nondeterministic)
-number of test failures - a less than ideal situation, but one for which these
-tools can be handy...
+Two small Jenkins-related tools which I sometimes find useful, particularly when
+working on a project with a fluctuating (and possibly nondeterministic) number
+of test failures - a less than ideal situation, but one for which these tools
+can be handy...
 
 See below for more details, but briefly, we have:
 
 * `jen-compare` - compare two sets of Jenkins test results and report on
   disjoint sets of failing tests between two sets.
 * `jen-job-history` - report on the build history of some job: which branches
-  and revisions correspond to which builds, etc.
+  and revisions correspond to which builds, etc.  This is sometimes handy for
+  working out which builds to target with `jen_compare`.
 
 
 
 ## Installation / requirements
 
-I believe (but haven't proven) that these should still both work under
-python2.7; python 3 is recommended, however.
+* These tools require python >= 3.7; if you absolutely have to run this on an
+  older version, see the
+  [archival](https://github.com/gimbo/gentle-jenkins-tools/tree/archival) tag,
+  which is an old version which ought to work with python2.7 (I _think_).
 
-Options for running these tools:
-
-* Best: use [`pipsi`](https://github.com/mitsuhiko/pipsi) or (better)
-  [`pipx`](https://github.com/pipxproject/pipx) to install the tools for general
-  use, e.g.
+* The best way to install this package is with
+  [`pipx`](https://github.com/pipxproject/pipx):
 
   ```shell
-  pipx install .
+  pipx install --spec <path to package> gentle-jenkins-tools
   ```
 
-  Then you should be able to run `jen-compare` and `jen-job-history` directly.
+* (Note that pipsi _won't_ work, because this package uses
+  [`poetry`](https://github.com/sdispater/poetry) not `setuptools`.)
 
-  (If you're not also using it already, I highly recommend
-  [`pyenv`](https://github.com/pyenv/pyenv) to enable you to run whatever
-  versions of python you want, in parallel.)
-
-* Less good but works: create a virtualenv and `pip install .` this package into
-  it, then run the scripts straight from the venv's `bin` directory.
-
-* Cruftiest: `pip install -r requirements.txt` into some venv (or globally if
-  you're mad) and the run the scripts with `python ./jen_compare.py`, etc.
+* You may find [`pyenv`](https://github.com/pyenv/pyenv) helpful if you're not
+  using it already - it enables you to run whatever versions of python you want,
+  in parallel.
 
 
 
@@ -172,3 +167,4 @@ Definite TODOs:
 * Add authentication to both tools.
 * Add a limit argument to `jen-job-history` so it only gets the last `n` builds
   rather than all it can find.
+* Some tests would be nice. :-)

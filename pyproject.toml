@@ -1,2 +1,33 @@
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
 [tool.black]
 skip-string-normalization = true
+
+[tool.poetry]
+name = "gentle-jenkins-tools"
+version = "0.2.0"
+description = "Some small Jenkins-related tools which I sometimes find useful"
+authors = ["Andy Gimblett <andy@barefootcode.com>"]
+repository = "https://github.com/gimbo/gentle-jenkins-tools"
+homepage = "https://github.com/gimbo/gentle-jenkins-tools"
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+click = "^7.0"
+requests = "^2.21"
+tabulate = "^0.8.3"
+
+[tool.poetry.dev-dependencies]
+black = { version = "*", allows-prereleases = true }
+flake8 = "^3.7"
+mypy = "^0.670.0"
+pytest = "^4.2"
+pre-commit = "^1.14"
+
+[tool.poetry.scripts]
+jen-compare = 'gentle_jenkins_tools.jen_compare:main'
+jen-job-history = 'gentle_jenkins_tools.jen_job_history:main'
