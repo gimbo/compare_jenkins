@@ -29,79 +29,77 @@ def get_and_report_build_history(base, project, timeout):
     build_history = get_build_history(base, project, timeout)
     if not build_history:
         return
-    report_build('ID', 'Timestamp', 'Time', 'Revision', 'Branch')
-    for build_id, build_url in build_history:
-        build_info = get_build_info(build_url, timeout)
-        report_build(build_id, *build_info)
+    report_build('Num', '', 'Timestamp', 'Time', 'Revision', 'Branch')
+    for build in build_history:
+        report_build(*build)
 
 
 def get_build_history(base, project, timeout):
-    project_api_url = get_project_api_url(base, project)
-    result = get_url(project_api_url, timeout)
+    api_url = get_project_api_url(base, project)
+    result = get_url(api_url, timeout)
     if not result:
-        return []
-    builds = sorted((
-        (build['number'], build['url'])
-        for build in result['builds']
-    ), reverse=True)
+        return
+    builds = [parse_build(build) for build in result['builds']]
     return builds
 
 
 def get_project_api_url(base, project):
-    return get_api_url('{}/{}/'.format(base, project))
+    tree = (
+        'builds[number,building,timestamp,duration,estimatedDuration,'
+        'actions[lastBuiltRevision[SHA1,branch[name]]]]'
+    )
+    url = '{}/job/{}/api/json?depth=1&pretty=true&tree={}'.format(
+        base,
+        project,
+        tree,
+    )
+    return url
 
 
-def get_api_url(url):
-    return '{}api/json'.format(url)
+def parse_build(build):
+    number = build.get('number')
+    building = build.get('building')
+    timestamp = build.get('timestamp')
+    if timestamp:
+        timestamp = parse_build_timestamp(timestamp)
+    if not building:
+        duration = build.get('duration')
+    else:
+        duration = build.get('estimatedDuration')
+    if duration:
+        duration = parse_build_duration(duration)
+    revision, branch_name = get_revision_and_branch_name(build)
+    return number, building, timestamp, duration, revision, branch_name
 
 
-def get_build_info(build_url, timeout):
-    build_api_url = get_api_url(build_url)
-    result = get_url(build_api_url, timeout)
-    if not result:
-        return '???', '???', '???', '???'
-    timestamp = parse_build_timestamp(result)
-    duration = parse_build_duration(result)
-    revision, branch_name = get_revision_and_branch_name(result)
-    return timestamp, duration, revision, branch_name
-
-
-def parse_build_timestamp(result):
-    try:
-        raw_timestamp = result['timestamp']
-    except KeyError:
-        return '???'
+def parse_build_timestamp(raw_timestamp):
     timestamp = datetime.utcfromtimestamp(raw_timestamp / 1000)
     return timestamp.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def parse_build_duration(result):
-    try:
-        raw_duration = result['duration']
-    except KeyError:
-        return '???'
+def parse_build_duration(raw_duration):
     seconds = raw_duration // 1000
     mins, secs = divmod(seconds, 60)
     duration = '{}m{:02}s'.format(mins, secs)
     return duration
 
 
-def get_revision_and_branch_name(result):
-    build_data_action = get_build_data_action(result)
+def get_revision_and_branch_name(build):
+    trigger_data = get_build_trigger_data(build)
+    revision = trigger_data.get('SHA1')
     try:
-        last_built = build_data_action['lastBuiltRevision']
-        branch = last_built['branch'][0]
-    except KeyError:
-        return '???', '???'
-    revision = branch.get('SHA1', '???')
-    branch_name = normalise_branch_name(branch.get('name', '???'))
+        branch_name = trigger_data['branch'][0]['name']
+    except (IndexError, KeyError):
+        branch_name = None
+    else:
+        branch_name = normalise_branch_name(branch_name)
     return revision, branch_name
 
 
-def get_build_data_action(result):
-    for action in result['actions']:
-        if 'hudson.plugins.git.util.BuildData' in action.get('_class', ''):
-            return action
+def get_build_trigger_data(build):
+    for action in build.get('actions'):
+        if action.get('_class') == 'hudson.plugins.git.util.BuildData':
+            return action.get('lastBuiltRevision', {})
     return {}
 
 
@@ -114,10 +112,15 @@ def normalise_branch_name(branch_name):
     return branch_name
 
 
-def report_build(build_id, timestamp, duration, revision, branch_name):
-    template = '{:<4}  {:19}  {:>6}  {:<8}  {}'
+def report_build(number, building, timestamp, duration, revision, branch_name):
+    template = '{:<4} {} {:19}  {:>6}  {:<8}  {}'
     print(template.format(
-        build_id, timestamp, duration, revision[:8], branch_name
+        number,
+        '*' if building else ' ',
+        timestamp,
+        duration,
+        revision[:8],
+        branch_name,
     ))
 
 
