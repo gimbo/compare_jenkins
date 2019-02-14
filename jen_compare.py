@@ -1,10 +1,10 @@
 import argparse
 import os
 import sys
+from xml.etree import ElementTree
 
 import click
 import requests
-from bs4 import BeautifulSoup
 from click import echo
 
 
@@ -19,25 +19,25 @@ DEFAULT_TIMEOUT = 5  # Seconds
 
 
 def main():
-
     args = parse_args()
+    try:
+        get_and_report_comparison(args.base, args.left, args.right, args.timeout)
+    except KeyboardInterrupt:
+        print()
 
-    left_branch = branch_url(args.base, args.left)
-    right_branch = branch_url(args.base, args.right)
-    echo('Left branch..: {}'.format(left_branch))
-    echo('Right branch.: {}'.format(right_branch))
-    echo()
 
-    left_doc = get_url(left_branch, timeout=args.timeout)
-    right_doc = get_url(right_branch, timeout=args.timeout)
+def get_and_report_comparison(base, left, right, timeout):
 
-    left_failed = get_set_from_html(left_doc)
-    right_failed = get_set_from_html(right_doc)
-    fail_only_left = sorted(left_failed - right_failed)
-    fail_only_right = sorted(right_failed - left_failed)
+    echo('Fetching failures from left branch')
+    left_fails = get_fails(base, left, timeout)
+    echo('Fetching failures from right branch')
+    right_fails = get_fails(base, right, timeout)
 
-    echo("Failed in the left branch..: {}".format(len(left_failed)))
-    echo("Failed in the right branch.: {}".format(len(right_failed)))
+    fail_only_left = sorted(left_fails - right_fails)
+    fail_only_right = sorted(right_fails - left_fails)
+
+    echo("Failed in the left branch..: {}".format(len(left_fails)))
+    echo("Failed in the right branch.: {}".format(len(right_fails)))
     echo()
 
     list_side_failures(fail_only_left, left_fail=True, right_fail=False)
@@ -45,8 +45,27 @@ def main():
     list_side_failures(fail_only_right, left_fail=False, right_fail=True)
 
 
-def branch_url(base, path):
-    return '{}/job/{}/testReport/'.format(base, path)
+def get_fails(base, branch, timeout):
+    url = get_fails_api_url(base, branch)
+    fails_xml = get_url(url, timeout).decode('utf-8')
+    failures = parse_fails_xml(fails_xml)
+    return failures
+
+
+def get_fails_api_url(base, branch):
+    xpath = "xpath=//case[status='FAILED' or status='REGRESSION']&wrapper=suite"
+    tree = "tree=suites[cases[status,className,name]]"
+    url = '{}/job/{}/testReport/api/xml?{}&{}'.format(base, branch, xpath, tree)
+    return url
+
+
+def parse_fails_xml(fails_xml):
+    tree = ElementTree.fromstring(fails_xml)
+    failures = {
+        (element.find('className').text, element.find('name').text)
+        for element in tree if element.tag == 'case'
+    }
+    return failures
 
 
 def get_url(url, timeout):
@@ -59,20 +78,7 @@ def get_url(url, timeout):
     if code != 200:
         echo('{} {}: {}'.format(code, httplib.responses[code], url))
         sys.exit(1)
-    return BeautifulSoup(response.content, 'html.parser')
-
-
-def get_set_from_html(html):
-    """
-    :param html: Parsed BS html
-    :return: set of failing tests names
-    """
-    fail_table = html.find_all('table')[1]
-    failed = set()
-    for row in fail_table.find_all('tr')[1:]:
-        failed.add(row.find_all('a')[2].text)
-
-    return failed
+    return response.content
 
 
 def list_side_failures(failures, left_fail, right_fail):
@@ -92,8 +98,12 @@ def list_side_failures(failures, left_fail, right_fail):
     )
     echo(msg)
 
-    for line in failures:
-        echo(line)
+    for failure in failures:
+        echo(failure_name(*failure))
+
+
+def failure_name(class_name, test_name):
+    return '{}.{}'.format(class_name, test_name)
 
 
 style = click.style
