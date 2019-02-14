@@ -3,13 +3,31 @@ import http.client as httplib
 import os
 import sys
 from datetime import datetime
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+)
 
 import requests
 from click import echo
+from tabulate import tabulate
 
 
 BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
 DEFAULT_TIMEOUT = 5  # Seconds
+
+
+BuildInfo = Tuple[
+    Optional[int],  # Number
+    Optional[bool],  # Building
+    Optional[datetime],  # Timestamp
+    Optional[int],  # Duration
+    Optional[str],  # Revision
+    Optional[str],  # Branch name
+]
 
 
 def main():
@@ -20,25 +38,27 @@ def main():
         print()
 
 
-def get_and_report_build_history(base, project, timeout):
+def get_and_report_build_history(
+    base: str,
+    project: str,
+    timeout: int,
+):
     build_history = get_build_history(base, project, timeout)
     if not build_history:
         return
-    report_build('Num', '', 'Timestamp', 'Time', 'Revision', 'Branch')
-    for build in build_history:
-        report_build(*build)
+    report_build_history(build_history)
 
 
-def get_build_history(base, project, timeout):
+def get_build_history(base: str, project: str, timeout: int) -> List[BuildInfo]:
     api_url = get_project_api_url(base, project)
     result = get_url(api_url, timeout)
     if not result:
-        return
+        return []
     builds = [parse_build(build) for build in result['builds']]
     return builds
 
 
-def get_project_api_url(base, project):
+def get_project_api_url(base: str, project: str) -> str:
     tree = (
         'builds[number,building,timestamp,duration,estimatedDuration,'
         'actions[lastBuiltRevision[SHA1,branch[name]]]]'
@@ -51,35 +71,32 @@ def get_project_api_url(base, project):
     return url
 
 
-def parse_build(build):
-    number = build.get('number')
-    building = build.get('building')
-    timestamp = build.get('timestamp')
-    if timestamp:
-        timestamp = parse_build_timestamp(timestamp)
-    if not building:
-        duration = build.get('duration')
+def parse_build(build: Dict[str, Any]) -> BuildInfo:
+    number: Optional[int] = build.get('number')
+    building: Optional[bool] = build.get('building')
+    timestamp: Optional[datetime]
+    try:
+        raw_timestamp: int = build['timestamp']
+    except KeyError:
+        timestamp = None
     else:
+        timestamp = parse_build_timestamp(raw_timestamp)
+    duration: Optional[int]
+    duration = build.get('duration')
+    if building and duration == 0:
         duration = build.get('estimatedDuration')
-    if duration:
-        duration = parse_build_duration(duration)
     revision, branch_name = get_revision_and_branch_name(build)
     return number, building, timestamp, duration, revision, branch_name
 
 
-def parse_build_timestamp(raw_timestamp):
+def parse_build_timestamp(raw_timestamp: int) -> datetime:
     timestamp = datetime.utcfromtimestamp(raw_timestamp / 1000)
-    return timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    return timestamp
 
 
-def parse_build_duration(raw_duration):
-    seconds = raw_duration // 1000
-    mins, secs = divmod(seconds, 60)
-    duration = '{}m{:02}s'.format(mins, secs)
-    return duration
-
-
-def get_revision_and_branch_name(build):
+def get_revision_and_branch_name(
+    build: Dict[str, Any]
+) -> Tuple[Optional[str], Optional[str]]:
     trigger_data = get_build_trigger_data(build)
     revision = trigger_data.get('SHA1')
     try:
@@ -107,19 +124,47 @@ def normalise_branch_name(branch_name):
     return branch_name
 
 
-def report_build(number, building, timestamp, duration, revision, branch_name):
-    template = '{:<4} {} {:19}  {:>6}  {:<8}  {}'
-    print(template.format(
-        number,
-        '*' if building else ' ',
-        timestamp,
-        duration,
-        revision[:8],
+def report_build_history(build_history: List[BuildInfo]):
+    headers = ('Build', 'Timestamp', 'Time', 'Revision', 'Branch')
+    print(
+        # Ignoring spurious mypy error on the next line
+        tabulate(  # type:ignore
+            [prep_for_tabulation(build) for build in build_history],
+            headers=headers,
+            tablefmt='plain',
+            colalign=('right', 'left', 'right'),
+        )
+    )
+
+
+def prep_for_tabulation(build: BuildInfo) -> Tuple[Optional[str], ...]:
+    number, building, timestamp, duration, revision, branch_name = build
+    number_str = str(number) if number is not None else ''
+    duration_str = format_duration(duration) if duration is not None else None
+    if building:
+        number_str = '* ' + number_str
+        duration_str = '?' + duration_str
+    return (
+        number_str,
+        format_timestamp(timestamp) if timestamp is not None else None,
+        duration_str,
+        revision[:8] if revision else revision,
         branch_name,
-    ))
+    )
 
 
-def get_url(url, timeout):
+def format_timestamp(timestamp):
+    return timestamp.strftime('%Y-%m-%d %H:%M:%S')
+
+
+def format_duration(raw_duration):
+    seconds = raw_duration // 1000
+    mins, secs = divmod(seconds, 60)
+    duration = '{}m{:02}s'.format(mins, secs)
+    return duration
+
+
+def get_url(url: str, timeout: int) -> Any:
     try:
         response = requests.get(url, timeout=timeout)
     except requests.exceptions.ConnectTimeout:
