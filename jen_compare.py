@@ -46,7 +46,7 @@ def main():
 
 
 def branch_url(base, path):
-    return '{}/{}/testReport/'.format(base, path)
+    return '{}/job/{}/testReport/'.format(base, path)
 
 
 def get_url(url, timeout):
@@ -122,7 +122,7 @@ def parse_args():
         'base', metavar='BASE_URL',
         nargs='?',
         help=(
-            'Jenkins URL base (e.g. http://localhost:8000/job). '
+            'Jenkins URL base (e.g. http://localhost:8000). '
             'If not specified, the default value is taken from the env var '
             '{base_env_var_name} if it is set '
             '(current value: {base_env_var_value}).'
