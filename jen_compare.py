@@ -1,4 +1,5 @@
 import argparse
+import http.client as httplib
 import os
 import sys
 from xml.etree import ElementTree
@@ -6,12 +7,6 @@ from xml.etree import ElementTree
 import click
 import requests
 from click import echo
-
-
-try:
-    import http.client as httplib
-except ImportError:
-    import httplib
 
 
 BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'

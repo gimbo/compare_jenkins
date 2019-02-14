@@ -1,16 +1,11 @@
 import argparse
+import http.client as httplib
 import os
 import sys
 from datetime import datetime
 
 import requests
 from click import echo
-
-
-try:
-    import http.client as httplib
-except ImportError:
-    import httplib
 
 
 BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
