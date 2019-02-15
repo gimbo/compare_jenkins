@@ -20,14 +20,50 @@ BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
 DEFAULT_TIMEOUT = 5  # Seconds
 
 
-BuildInfo = Tuple[
-    Optional[int],  # Number
-    Optional[bool],  # Building
-    Optional[datetime],  # Timestamp
-    Optional[int],  # Duration
-    Optional[str],  # Revision
-    Optional[str],  # Branch name
-]
+class BuildInfo:
+
+    def __init__(
+        self,
+        number: Optional[int],
+        building: Optional[bool],
+        timestamp: Optional[datetime],
+        duration: Optional[int],
+        revision: Optional[str],
+        branch_name: Optional[str],
+    ):
+        self.number = number
+        self.building = building
+        self.timestamp = timestamp
+        self.duration = duration
+        self.revision = revision
+        self.branch_name = branch_name
+
+    @property
+    def number_str(self) -> Optional[str]:
+        if self.number is None:
+            return None
+        number_str = str(self.number)
+        if self.building:
+            number_str = '* ' + number_str
+        return number_str
+
+    @property
+    def duration_str(self) -> Optional[str]:
+        if self.duration is None:
+            return None
+        seconds = self.duration // 1000
+        mins, secs = divmod(seconds, 60)
+        duration_str: str = '{}m{:02}s'.format(mins, secs)
+        if self.building:
+            duration_str = '?' + duration_str
+        return duration_str
+
+    @property
+    def timestamp_str(self) -> Optional[str]:
+        if self.timestamp is None:
+            return None
+        timestamp_str = self.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        return timestamp_str
 
 
 def main():
@@ -86,7 +122,7 @@ def parse_build(build: Dict[str, Any]) -> BuildInfo:
     if building and duration == 0:
         duration = build.get('estimatedDuration')
     revision, branch_name = get_revision_and_branch_name(build)
-    return number, building, timestamp, duration, revision, branch_name
+    return BuildInfo(number, building, timestamp, duration, revision, branch_name)
 
 
 def parse_build_timestamp(raw_timestamp: int) -> datetime:
@@ -138,30 +174,13 @@ def report_build_history(build_history: List[BuildInfo]):
 
 
 def prep_for_tabulation(build: BuildInfo) -> Tuple[Optional[str], ...]:
-    number, building, timestamp, duration, revision, branch_name = build
-    number_str = str(number) if number is not None else ''
-    duration_str = format_duration(duration) if duration is not None else None
-    if building:
-        number_str = '* ' + number_str
-        duration_str = '?' + duration_str
     return (
-        number_str,
-        format_timestamp(timestamp) if timestamp is not None else None,
-        duration_str,
-        revision[:8] if revision else revision,
-        branch_name,
+        build.number_str,
+        build.timestamp_str,
+        build.duration_str,
+        build.revision[:8] if build.revision else None,
+        build.branch_name,
     )
-
-
-def format_timestamp(timestamp):
-    return timestamp.strftime('%Y-%m-%d %H:%M:%S')
-
-
-def format_duration(raw_duration):
-    seconds = raw_duration // 1000
-    mins, secs = divmod(seconds, 60)
-    duration = '{}m{:02}s'.format(mins, secs)
-    return duration
 
 
 def get_url(url: str, timeout: int) -> Any:
