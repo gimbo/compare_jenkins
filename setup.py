@@ -5,11 +5,11 @@ with open("requirements.txt") as fp:
     install_requires = fp.read()
 
 setup(
-    name="compare-jenkins",
+    name="gentle-jenkins-tools",
     version="0.1",
-    url="https://github.com/evilkost/compare_jenkins",
-    author="Valentin Gologuzov",
-    description="Simple script to compare test results in jenkins.",
+    url="https://github.com/gimbo/gentle-jenkins-tools",
+    author="Andy Gimblett",
+    description="Some small Jenkins-related tools which I sometimes find useful",
     install_requires=install_requires,
     entry_points={
         "console_scripts": [
