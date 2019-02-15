@@ -3,13 +3,7 @@ import http.client as httplib
 import os
 import sys
 from datetime import datetime
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-)
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from click import echo
@@ -21,7 +15,6 @@ DEFAULT_TIMEOUT = 5  # Seconds
 
 
 class BuildInfo:
-
     def __init__(
         self,
         number: Optional[int],
@@ -74,11 +67,7 @@ def main():
         print()
 
 
-def get_and_report_build_history(
-    base: str,
-    job: str,
-    timeout: int,
-):
+def get_and_report_build_history(base: str, job: str, timeout: int):
     build_history = get_build_history(base, job, timeout)
     if not build_history:
         return
@@ -99,11 +88,7 @@ def get_job_api_url(base: str, job: str) -> str:
         'builds[number,building,timestamp,duration,estimatedDuration,'
         'actions[lastBuiltRevision[SHA1,branch[name]]]]'
     )
-    url = '{}/job/{}/api/json?depth=1&pretty=true&tree={}'.format(
-        base,
-        job,
-        tree,
-    )
+    url = '{}/job/{}/api/json?depth=1&pretty=true&tree={}'.format(base, job, tree)
     return url
 
 
@@ -212,7 +197,8 @@ def parse_args():
 
     default_base = os.environ.get(BASE_ENV_VAR_NAME)
     parser.add_argument(
-        'base', metavar='BASE_URL',
+        'base',
+        metavar='BASE_URL',
         nargs='?',
         help=(
             'Jenkins URL base (e.g. http://localhost:8000). '
@@ -221,15 +207,14 @@ def parse_args():
             '(current value: {base_env_var_value}).'
         ).format(
             base_env_var_name=BASE_ENV_VAR_NAME,
-            base_env_var_value=default_base or 'none set'
+            base_env_var_value=default_base or 'none set',
         ),
     )
+    parser.add_argument('job', metavar='JOB', help='job name (e.g. main)')
     parser.add_argument(
-        'job', metavar='JOB',
-        help='job name (e.g. main)',
-    )
-    parser.add_argument(
-        '-t', '--timeout', metavar='N',
+        '-t',
+        '--timeout',
+        metavar='N',
         type=check_positive,
         help='HTTP timeout in seconds (default: {})'.format(DEFAULT_TIMEOUT),
     )

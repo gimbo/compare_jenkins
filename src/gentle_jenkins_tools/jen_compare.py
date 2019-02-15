@@ -58,7 +58,8 @@ def parse_fails_xml(fails_xml):
     tree = ElementTree.fromstring(fails_xml)
     failures = {
         (element.find('className').text, element.find('name').text)
-        for element in tree if element.tag == 'case'
+        for element in tree
+        if element.tag == 'case'
     }
     return failures
 
@@ -124,7 +125,8 @@ def parse_args():
 
     default_base = os.environ.get(BASE_ENV_VAR_NAME)
     parser.add_argument(
-        'base', metavar='BASE_URL',
+        'base',
+        metavar='BASE_URL',
         nargs='?',
         help=(
             'Jenkins URL base (e.g. http://localhost:8000). '
@@ -133,28 +135,22 @@ def parse_args():
             '(current value: {base_env_var_value}).'
         ).format(
             base_env_var_name=BASE_ENV_VAR_NAME,
-            base_env_var_value=default_base or 'none set'
+            base_env_var_value=default_base or 'none set',
         ),
     )
     parser.add_argument(
-        'left', metavar='LEFT',
-        help=(
-            'Path to left hand build (e.g. master/7)'
-        ),
+        'left', metavar='LEFT', help=('Path to left hand build (e.g. master/7)')
     )
     parser.add_argument(
-        'right', metavar='RIGHT',
-        help=(
-            'Path to right hand build (e.g. feature/20)'
-        ),
+        'right', metavar='RIGHT', help=('Path to right hand build (e.g. feature/20)')
     )
     parser.add_argument(
-        '-m', '--monochrome',
-        action='store_true',
-        help="Don't use colours in output",
+        '-m', '--monochrome', action='store_true', help="Don't use colours in output"
     )
     parser.add_argument(
-        '-t', '--timeout', metavar='N',
+        '-t',
+        '--timeout',
+        metavar='N',
         type=check_positive,
         help='HTTP timeout in seconds (default: {})'.format(DEFAULT_TIMEOUT),
     )
