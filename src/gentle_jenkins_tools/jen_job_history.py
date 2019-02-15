@@ -2,6 +2,7 @@ import argparse
 import http.client as httplib
 import os
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -14,22 +15,15 @@ BASE_ENV_VAR_NAME = 'JEN_COMPARE_DEFAULT_BASE'
 DEFAULT_TIMEOUT = 5  # Seconds
 
 
+@dataclass
 class BuildInfo:
-    def __init__(
-        self,
-        number: Optional[int],
-        building: Optional[bool],
-        timestamp: Optional[datetime],
-        duration: Optional[int],
-        revision: Optional[str],
-        branch_name: Optional[str],
-    ):
-        self.number = number
-        self.building = building
-        self.timestamp = timestamp
-        self.duration = duration
-        self.revision = revision
-        self.branch_name = branch_name
+
+    number: Optional[int]
+    building: Optional[bool]
+    timestamp: Optional[datetime]
+    duration: Optional[int]
+    revision: Optional[str]
+    branch_name: Optional[str]
 
     @property
     def number_str(self) -> Optional[str]:
@@ -57,6 +51,16 @@ class BuildInfo:
             return None
         timestamp_str = self.timestamp.strftime('%Y-%m-%d %H:%M:%S')
         return timestamp_str
+
+    @property
+    def tabulation_line(self) -> Tuple[Optional[str], ...]:
+        return (
+            self.number_str,
+            self.timestamp_str,
+            self.duration_str,
+            self.revision[:8] if self.revision else None,
+            self.branch_name,
+        )
 
 
 def main():
@@ -150,21 +154,11 @@ def report_build_history(build_history: List[BuildInfo]):
     print(
         # Ignoring spurious mypy error on the next line
         tabulate(  # type:ignore
-            [prep_for_tabulation(build) for build in build_history],
+            [build.tabulation_line for build in build_history],
             headers=headers,
             tablefmt='plain',
             colalign=('right', 'left', 'right'),
         )
-    )
-
-
-def prep_for_tabulation(build: BuildInfo) -> Tuple[Optional[str], ...]:
-    return (
-        build.number_str,
-        build.timestamp_str,
-        build.duration_str,
-        build.revision[:8] if build.revision else None,
-        build.branch_name,
     )
 
 
