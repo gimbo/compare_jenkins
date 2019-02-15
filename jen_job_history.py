@@ -69,24 +69,24 @@ class BuildInfo:
 def main():
     args = parse_args()
     try:
-        get_and_report_build_history(args.base, args.project, args.timeout)
+        get_and_report_build_history(args.base, args.job, args.timeout)
     except KeyboardInterrupt:
         print()
 
 
 def get_and_report_build_history(
     base: str,
-    project: str,
+    job: str,
     timeout: int,
 ):
-    build_history = get_build_history(base, project, timeout)
+    build_history = get_build_history(base, job, timeout)
     if not build_history:
         return
     report_build_history(build_history)
 
 
-def get_build_history(base: str, project: str, timeout: int) -> List[BuildInfo]:
-    api_url = get_project_api_url(base, project)
+def get_build_history(base: str, job: str, timeout: int) -> List[BuildInfo]:
+    api_url = get_job_api_url(base, job)
     result = get_url(api_url, timeout)
     if not result:
         return []
@@ -94,14 +94,14 @@ def get_build_history(base: str, project: str, timeout: int) -> List[BuildInfo]:
     return builds
 
 
-def get_project_api_url(base: str, project: str) -> str:
+def get_job_api_url(base: str, job: str) -> str:
     tree = (
         'builds[number,building,timestamp,duration,estimatedDuration,'
         'actions[lastBuiltRevision[SHA1,branch[name]]]]'
     )
     url = '{}/job/{}/api/json?depth=1&pretty=true&tree={}'.format(
         base,
-        project,
+        job,
         tree,
     )
     return url
@@ -225,8 +225,8 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        'project', metavar='PROJECT',
-        help='Project name (e.g. main)',
+        'job', metavar='JOB',
+        help='job name (e.g. main)',
     )
     parser.add_argument(
         '-t', '--timeout', metavar='N',

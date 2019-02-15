@@ -23,16 +23,16 @@ def main():
 
 def get_and_report_comparison(base, left, right, timeout):
 
-    echo('Fetching failures from left branch')
+    echo('Fetching failures from left build')
     left_fails = get_fails(base, left, timeout)
-    echo('Fetching failures from right branch')
+    echo('Fetching failures from right build')
     right_fails = get_fails(base, right, timeout)
 
     fail_only_left = sorted(left_fails - right_fails)
     fail_only_right = sorted(right_fails - left_fails)
 
-    echo("Failed in the left branch..: {}".format(len(left_fails)))
-    echo("Failed in the right branch.: {}".format(len(right_fails)))
+    echo("Failed in the left build..: {}".format(len(left_fails)))
+    echo("Failed in the right build.: {}".format(len(right_fails)))
     echo()
 
     list_side_failures(fail_only_left, left_fail=True, right_fail=False)
@@ -40,17 +40,17 @@ def get_and_report_comparison(base, left, right, timeout):
     list_side_failures(fail_only_right, left_fail=False, right_fail=True)
 
 
-def get_fails(base, branch, timeout):
-    url = get_fails_api_url(base, branch)
+def get_fails(base, build, timeout):
+    url = get_fails_api_url(base, build)
     fails_xml = get_url(url, timeout).decode('utf-8')
     failures = parse_fails_xml(fails_xml)
     return failures
 
 
-def get_fails_api_url(base, branch):
+def get_fails_api_url(base, build):
     xpath = "xpath=//case[status='FAILED' or status='REGRESSION']&wrapper=suite"
     tree = "tree=suites[cases[status,className,name]]"
-    url = '{}/job/{}/testReport/api/xml?{}&{}'.format(base, branch, xpath, tree)
+    url = '{}/job/{}/testReport/api/xml?{}&{}'.format(base, build, xpath, tree)
     return url
 
 
@@ -139,13 +139,13 @@ def parse_args():
     parser.add_argument(
         'left', metavar='LEFT',
         help=(
-            'Path to left hand target (e.g. main)'
+            'Path to left hand build (e.g. master/7)'
         ),
     )
     parser.add_argument(
         'right', metavar='RIGHT',
         help=(
-            'Path to right hand target (e.g. some-feature/20)'
+            'Path to right hand build (e.g. feature/20)'
         ),
     )
     parser.add_argument(
