@@ -5,6 +5,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from click import echo
@@ -170,7 +171,8 @@ def get_url(url: str, timeout: int) -> Any:
         return {}
     code = response.status_code
     if code != 200:
-        echo('{} {}: {}'.format(code, httplib.responses[code], url))
+        url_without_query = urlunparse(urlparse(url)[:4] + (None, None))  # type: ignore
+        echo('{} {}: {}'.format(code, httplib.responses[code], url_without_query))
         return {}
     return response.json()
 

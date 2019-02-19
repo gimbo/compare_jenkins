@@ -2,6 +2,7 @@ import argparse
 import http.client as httplib
 import os
 import sys
+from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
 
 import click
@@ -72,7 +73,8 @@ def get_url(url, timeout):
         sys.exit(1)
     code = response.status_code
     if code != 200:
-        echo('{} {}: {}'.format(code, httplib.responses[code], url))
+        url_without_query = urlunparse(urlparse(url)[:4] + (None, None))
+        echo('{} {}: {}'.format(code, httplib.responses[code], url_without_query))
         sys.exit(1)
     return response.content
 
