@@ -116,7 +116,7 @@ the `feature` job:
 ```shell
 $ python jen-job-history http://jenkins.host.example feature
   Build  Timestamp              Time  Revision    Branch
-  * 339  2019-02-15 10:50:01  ?8m37s  139c9367    xyz
+  * 339  2019-02-15 10:50:01  -8m37s  139c9367    xyz
     338  2019-02-15 09:27:01   8m54s  b2f273b1    xyz
     337  2019-02-14 20:10:01   9m25s  ef25c86f    doodah
     336  2019-02-14 17:07:01   8m39s  ad001752    archer
@@ -132,8 +132,10 @@ Hopefully that's mainly self-explanatory; things to note:
   specified job - in this case 8 builds.
 
 * Build 339 is still in progress (hence the `*` next to the build number - and
-  the `?` next to the time, as that is then an estimate). All the other builds
-  have finished.
+  the `-` next to the time, as that is then an estimate of the time remaining
+  until the build completes; if the job takes longer than the expected time,
+  this can turn into a `+`, with the time over-run counting upwards). All the
+  other builds have finished.
 
 * This job is configured to run vs many different branches; on other jobs, that
   might not be true, in which case the "Branch" column would be very boring.  Ah

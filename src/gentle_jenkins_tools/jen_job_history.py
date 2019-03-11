@@ -3,7 +3,7 @@ import http.client as httplib
 import os
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse, urlunparse
 
@@ -37,14 +37,41 @@ class BuildInfo:
 
     @property
     def duration_str(self) -> Optional[str]:
+        estimated_remaining = self.estimated_time_remaining
+        if estimated_remaining:
+            estimated_remaining_str = self._secs_to_mins_secs_str(estimated_remaining)
+            prefix = '-' if estimated_remaining >= 0 else '+'
+            return prefix + estimated_remaining_str
         if self.duration is None:
             return None
         seconds = self.duration // 1000
-        mins, secs = divmod(seconds, 60)
-        duration_str: str = '{}m{:02}s'.format(mins, secs)
+        duration_str = self._secs_to_mins_secs_str(seconds)
         if self.building:
+            # Building but can't estimate time remaining for some
+            # reason; show estimated duration.
             duration_str = '?' + duration_str
         return duration_str
+
+    @property
+    def estimated_end_time(self) -> Optional[datetime]:
+        if not self.building:
+            return None
+        if self.duration is None or self.timestamp is None:
+            return None
+        seconds: int = self.duration // 1000
+        return self.timestamp + timedelta(seconds=seconds)
+
+    @property
+    def estimated_time_remaining(self) -> Optional[int]:
+        end_time = self.estimated_end_time
+        if end_time is None:
+            return None
+        return int((end_time - datetime.utcnow()).total_seconds())
+
+    @staticmethod
+    def _secs_to_mins_secs_str(secs: int) -> str:
+        mins, secs = divmod(abs(secs), 60)
+        return '{}m{:02}s'.format(mins, secs)
 
     @property
     def timestamp_str(self) -> Optional[str]:
